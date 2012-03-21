@@ -1,0 +1,89 @@
+<?php
+
+function kna_services_node_load($nodes,$types){
+ //   dpm($nodes);
+}
+function kna_services_node_view($node,$view_mode,$langcode){
+    dpm($node);
+}
+
+function important_dates_feed(){
+
+	$result = db_select('node', 'n')
+	->fields('n')
+	->condition('type', 'important_date')
+	->execute()
+	->fetchAll();
+
+	$feed = array();
+	$i = 0;
+	foreach ($result as $res) {
+		$node = node_load($res->nid);
+		$date = $node->field_date[und][0][value];
+		$feed[$i]['start'] = $date;
+		$feed[$i]['title'] = $node->title;
+		$i++;
+	}
+
+	return $feed;
+}
+
+function image_gallery_feed(){
+	$feed = array();
+
+
+
+
+	return $feed;
+}
+
+/**
+ * Implements hook_services_resources().
+ */
+function kna_services_services_resources() {
+	return array(
+		'important_dates' => array(
+			'retrieve' => array(
+				'help' => 'Custom service that shows dates for the calendar module.',
+				'callback' => 'important_dates_feed',  
+				'access callback' => 'important_dates_access',
+				'args' => array(
+					array(
+						'name' => 'keys',
+						'optional' => TRUE,
+						'source' => array('param' => 'keys'),
+						'type' => 'string',
+						'description' => 'The search key(s)'
+						) 
+					)
+				)
+			),
+		'trap' => array(
+			'create' => array(
+				'help' => 'Custom',
+				'callback' => 'image_gallery_feed',
+				'access callback' => 'important_dates_access',
+				'args' => array(
+					array(
+						'name' => 'keys',
+						'optional' => TRUE,
+						'source' => array('param' => 'keys'),
+						'type' => 'string',
+						'description' => 'Search keys'
+						)
+					)
+				)
+			)
+		);
+}
+
+function important_dates_access(){
+	return true;
+}
+
+/*
+function _kna_services_latest_images(){
+	$feed = array( 'test' => 'test2');
+	return $feed;
+}*/
+

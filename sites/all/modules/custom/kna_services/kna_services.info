@@ -1,0 +1,5 @@
+name = KNA Services
+description = Services module for KNA
+package = Custom
+core = 7.x
+dependencies[] = services
