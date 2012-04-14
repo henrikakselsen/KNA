@@ -112,31 +112,6 @@ function _node_resource_definition() {
         ),
         'access arguments' => array('access content'),
       ),
-      'targeted_actions' => array(
-        'attach_file' => array(
-          'file' => array('type' => 'inc', 'module' => 'services', 'name' => 'resources/node_resource'),
-          'callback' => '_node_resource_attach_file',
-          'args' => array(
-            array(
-              'name' => 'nid',
-              'optional' => FALSE,
-              'source' => array('path' => 0),
-              'type' => 'int',
-              'description' => 'The nid of the node to attach a file to',
-            ),
-            array(
-              'name' => 'field_name',
-              'optional' => TRUE,
-              'source' => array('param' => 'field_name'),
-              'description' => 'The file parameteres',
-              'type' => 'array',
-            ),
-          ),
-          'access callback' => '_node_resource_access',
-          'access arguments' => array('update'),
-          'access arguments append' => TRUE,
-        ),
-      ),
       'relationships' => array(
         'files' => array(
           'file' => array('type' => 'inc', 'module' => 'services', 'name' => 'resources/node_resource'),
@@ -553,68 +528,4 @@ function _node_resource_load_node_comments($nid, $count = 0, $start = 0) {
   }
 
   return !empty($cids) ? comment_load_multiple($cids) : array();
-}
-
-
-function _node_resource_attach_file($nid, $field_name) {
-  global $user;
-  $validators = array(
-    'file_validate_extensions' => array(),
-    'file_validate_size' => array(),
-  );
-
-  $files = array();
-  foreach ($_FILES as $key => $post_file) {
-    $scheme = file_default_scheme();
-    $destination = $scheme . '://' . $post_file['name'];
-    if($post_file['error'] != 0) {
-      return services_error(t('An unknown error occured', 500));
-    }
-    $file = new stdClass();
-    $file->uri = $post_file['tmp_name'];
-    $file->filename = drupal_basename($file->uri);
-    $file->filemime = $post_file['type'];
-    $file->uid = $user->uid;
-    $file->timestamp = REQUEST_TIME;
-    $file->filesize = filesize($post_file['tmp_name']);
-    $file->status = 0;
-  
-    $destination_scheme = file_uri_scheme($destination);
-    if (!$destination_scheme || !file_stream_wrapper_valid_scheme($destination_scheme)) {
-      return services_error(t('The file could not be uploaded, because the destination %destination is invalid.', array('%destination' => $destination)), 406);
-    }
-    // A URI may already have a trailing slash or look like "public://".
-    if (substr($destination, -1) != '/') {
-      $destination .= '/';
-    }
-    $file->destination = file_destination($destination . $file->filename, FILE_EXISTS_RENAME);
-    // If file_destination() returns FALSE then $replace == FILE_EXISTS_ERROR and
-    // there's an existing file so we need to bail.
-    if ($file->destination === FALSE) {
-      return services_error(t('The file %source could not be uploaded because a file by that name already exists in the destination %directory.', array('%source' => $file->filename, '%directory' => $destination)), 406);
-    }
-    $file = file_save($file);
-    if($file === FALSE) {
-      return services_error(t('The file %source could not be saved to %directory for an unkown reason, please consult PHP and Drupal logs.', array('%source' => $file->filename, '%directory' => $destination)), 500);
-    }
-    $file = file_move($file, $destination, FILE_EXISTS_RENAME);
-    if($file === FALSE) {
-      return services_error(t('The file %source could not be saved to %directory for an unkown reason, please consult PHP and Drupal logs.', array('%source' => $file->filename, '%directory' => $destination)), 500);
-    }
-    // Required to be able to reference this file.
-    if ($file->fid) {
-      file_usage_add($file, 'services', 'files', $file->fid);
-      $node = node_load($nid);
-      $node->{$field_name[0]}['und'][0] = (array)$file;
-      node_save($node);
-      $files[] = array(
-        'fid' => $file->fid,
-        'uri' => services_resource_uri(array('file', $file->fid)),
-      );
-    }
-    else {
-      return services_error(t('An unknown error occured', 500));
-    }
-  }
-  return $files;
 }

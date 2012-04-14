@@ -478,7 +478,7 @@ class RESTServer {
   }
 
   public static function parseMultipart() {
-    return $_FILES;
+    return $_POST;
   }
 
   public static function parseYAML($handle) {
